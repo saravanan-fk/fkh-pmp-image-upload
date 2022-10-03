@@ -1,15 +1,22 @@
 const express = require("express");
+
 const upload = require("express-fileupload");
 const AWS = require("aws-sdk");
 const cors = require('cors');
 require("dotenv").config();
 
+const reactAppDistPath = __dirname + '/pmp-react/build';
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(express.static(reactAppDistPath));
+
 app.use(upload());
-app.use(express.json());
+// app.use(express.json());
 app.use(cors());
+app.use(express.json({limit: '50mb'}));
+// app.use(express.urlencoded({limit: '50mb'}));
 
 // s3 config
 const s3 = new AWS.S3({
@@ -40,10 +47,21 @@ async function uploadFile(payload) {
   return data.Location;
 }
 
+app.get('/', (req, res) => {
+  res.sendFile(`${reactAppDistPath}/index.html`);
+});
+
+
 app.post("/upload", async (req, res) => {
   const fileLocation = await uploadFile(req.body);
 
   return res.status(200).json({ url: fileLocation });
+});
+
+// for refresh redirect react app routes to index.html so that react router can take over
+// can this be differentiated based on request type?? like fetch vs document
+app.get('*', function(req, res, next) {
+  res.sendFile(`${reactAppDistPath}/index.html`);
 });
 
 app.listen(PORT, () => console.log(`server started at PORT: ${PORT}`));
